@@ -1,0 +1,23 @@
+{
+    "content_scripts": [
+        "main.js", 
+        "handlebars.js", 
+        "content.js"
+    ], 
+    "name": "One Button", 
+    "creator": "OneButtonDeveloper", 
+    "description": ":)", 
+    "framework_version": "1.7.9 e39b6ff2fcc8", 
+    "background_scripts": [
+        "background.js"
+    ], 
+    "homepage_url": "https://github.com/OneButtonDeveloper/one-button-browser-extension", 
+    "version": "1.2.3", 
+    "framework_package_id": "dev", 
+    "id": "com.kangoextensions.jquerydemo", 
+    "browser_button": {
+        "caption": "Do what i want!", 
+        "tooltipText": "Do what i want!", 
+        "icon": "icons/button.png"
+    }
+}
