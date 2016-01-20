@@ -5,6 +5,7 @@
 // @include about:blank
 // @require libs/jquery-2.1.4.min.js
 // @require libs/handlebars.min-latest.js
+// @require libs/shortcut.js
 // ==/UserScript==
 
 var $ = window.$.noConflict(true); // Required for IE
