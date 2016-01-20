@@ -7,12 +7,12 @@
     "name": "One Button", 
     "creator": "OneButtonDeveloper", 
     "description": ":)", 
-    "framework_version": "1.7.9 e39b6ff2fcc8", 
+    "framework_version": "1.8.0 3dc957b83b36", 
     "background_scripts": [
         "background.js"
     ], 
     "homepage_url": "https://github.com/OneButtonDeveloper/one-button-browser-extension", 
-    "version": "1.2.3", 
+    "version": "1.2.4", 
     "framework_package_id": "dev", 
     "id": "{132E47BF-0E8A-4AAA-8D1E-B2C3EEA895C3}", 
     "browser_button": {

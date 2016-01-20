@@ -2,12 +2,12 @@
     <Description about="urn:mozilla:install-manifest">
         <em:id>{862FF4F2-E810-11E0-8FEF-D73D4824019B}</em:id>
         <em:name>One Button</em:name>
-        <em:version>1.2.3</em:version>
+        <em:version>1.2.4</em:version>
         <em:targetApplication>
             <Description>
                 <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
-                <em:minVersion>17.0</em:minVersion>
-                <em:maxVersion>41.*</em:maxVersion>
+                <em:minVersion>38.0</em:minVersion>
+                <em:maxVersion>45.*</em:maxVersion>
             </Description>
         </em:targetApplication>
         <em:bootstrap>true</em:bootstrap>
