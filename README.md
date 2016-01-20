@@ -23,3 +23,9 @@ npm install -g coffee-script
 ### Build
 
 Run the [build.sh](https://github.com/OneButtonDeveloper/one-button-browser-extension/blob/master/one-button/build.sh) file from the [one-button](https://github.com/OneButtonDeveloper/one-button-browser-extension/tree/master/one-button) directory
+
+For example in Terminal on a Mac
+
+```
+bash build.sh
+```
