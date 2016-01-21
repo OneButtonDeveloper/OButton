@@ -3,8 +3,8 @@
 // @include http://*
 // @include https://*
 // @include about:blank
-// @require libs/jquery-2.1.4.min.js
-// @require libs/handlebars.min-latest.js
+// @require libs/jquery.min.js
+// @require libs/handlebars.min.js
 // @require libs/shortcut.js
 // ==/UserScript==
 
