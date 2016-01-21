@@ -1,4 +1,4 @@
-# one-button-browser-extension
+# OButton
 
 One-button cross-browser extension based on the [kango framework](https://github.com/KangoExtensions/kango)
 
