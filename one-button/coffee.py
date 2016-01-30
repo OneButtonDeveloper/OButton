@@ -5,11 +5,44 @@ import collections
 from os import path
 from subprocess import call
 
-BUILD_DIRECTORY_NAME = "build"
+
+class Directories:
+    def __init__(self):
+        pass
+
+    BUILD = "build"
+    CONTENT = "content"
+    BUILD_CONTENT = path.join(BUILD, CONTENT)
+    BACKGROUND = "background"
+    BUILD_BACKGROUND = path.join(BUILD, BACKGROUND)
+    HTML = ["html", "handlebars", "hb"]
+    LIBS = ["libs"]
+    CODE = ["src"]
+    COFFEE = ["coffeeScript", "coffee"]
+    TYPE_SCRIPT = ["typeScript", "ts"]
+    STYLES = ["css", "less"]
+    RESOURCES = ["res", "asserts", "raw"]
+    PROJECT_FOLDERS = HTML + CODE + COFFEE + TYPE_SCRIPT + STYLES + RESOURCES + LIBS
+
+
+class FileExtensions:
+    def __init__(self):
+        pass
+
+    TEMPLATES = ["html", "handlebars", "hb"]
+
+
+class FileName:
+    def __init__(self):
+        pass
+
+    TEMPLATE = "__handlebars"
+    TEMPLATE_EXT = ".js"
+    TEMPLATE_NAME = TEMPLATE + TEMPLATE_EXT
 
 
 def remove_build_path(my_path):
-    return re.sub('^' + BUILD_DIRECTORY_NAME, '', my_path)
+    return re.sub('^' + Directories.BUILD, '', my_path)
 
 
 def get_files_in_folder(my_path, pattern):
@@ -49,32 +82,17 @@ def find_files_recursive(my_path, pattern):
     for (dir_path, dir_names, file_names) in os.walk(my_path):
         for file_name in file_names:
             if p.match(file_name):
-                files.append(path.join(dir_path, file_name));
-    return files
-
-
-def find_files_by_name(my_path, name):
-    files = []
-    for (dir_path, dir_names, file_names) in os.walk(my_path):
-        for file_name in file_names:
-            if file_name == name:
                 files.append(path.join(dir_path, file_name))
     return files
 
 
-def create_folder(path_to_folder):
-    if not path.exists(path_to_folder):
-        os.makedirs(path_to_folder)
-
-
-def delete_folder(path_to_folder):
-    if path.exists(path_to_folder):
-        shutil.rmtree(path_to_folder)
-
-
-def create_build_folder():
-    delete_folder(BUILD_DIRECTORY_NAME)
-    create_folder(BUILD_DIRECTORY_NAME)
+def files_by_name_without_ext(my_path, name):
+    files = []
+    for (dir_path, dir_names, file_names) in os.walk(my_path):
+        for file_name in file_names:
+            if path.splitext(file_name)[0] == name:
+                files.append(path.join(dir_path, file_name))
+    return files
 
 
 def file_ext(file_name):
@@ -88,7 +106,7 @@ def file_ext_in(file_name, extensions):
     return file_ext(file_name) in extensions
 
 
-def concat_files(output_path, file_names, remove = True):
+def concat_files(output_path, file_names, remove=True):
     if not file_names:
         return
 
@@ -104,86 +122,102 @@ def concat_files(output_path, file_names, remove = True):
         delete_files(file_names)
 
 
-def concat_files_in_directory(output_path, directory, file_names, remove = True):
+def concat_files_in_directory(output_path, directory, file_names, remove=True):
     full_file_names = [path.join(directory, file_name) for file_name in file_names]
     concat_files(output_path, full_file_names, remove)
 
 
-def run():
-    print "\n\n"
-    create_build_folder()
-    shutil.copytree("background", path.join(BUILD_DIRECTORY_NAME, "background"))
-    shutil.copytree("content", path.join(BUILD_DIRECTORY_NAME, "content"))
+def create_directory(path_to_directory):
+    if not path.exists(path_to_directory):
+        os.makedirs(path_to_directory)
 
+
+def delete_directory(path_to_directory):
+    if path.exists(path_to_directory):
+        shutil.rmtree(path_to_directory)
+
+
+def delete_directories(path_to_directory, directories):
+    for d in directories:
+        delete_directory(path.join(path_to_directory, d))
+
+
+def create_build_directory():
+    delete_directory(Directories.BUILD)
+    create_directory(Directories.BUILD)
+    shutil.copytree(Directories.BACKGROUND, Directories.BUILD_BACKGROUND)
+    shutil.copytree(Directories.CONTENT, Directories.BUILD_CONTENT)
+
+
+def get_directories_from(directory):
+    return [f for f in os.listdir(directory) if path.isdir(path.join(directory, f))]
+
+
+def get_module_directories():
+    dirs = set(get_directories_from(Directories.BUILD_CONTENT)) - set(Directories.PROJECT_FOLDERS)
+    return [path.join(Directories.BUILD_CONTENT, d) for d in dirs]
+
+
+def compile_html(module_directory):
     try:
 
-        template_extensions = ['html', 'handlebars']
-        templates_re = ".*\.(" + ('|'.join(map(str, template_extensions))) + ")$"
-
-        html_file_names = [path.splitext(f)[0] for f in get_files_recursive(BUILD_DIRECTORY_NAME, templates_re)]
+        templates_re = ".*\.(" + ('|'.join(map(str, FileExtensions.TEMPLATES))) + ")$"
+        html_files = get_files_recursive(module_directory, templates_re)
+        html_file_names = [path.splitext(f)[0] for f in html_files]
 
         duplicates = [item for item, count in collections.Counter(html_file_names).items() if count > 1]
-
         if duplicates:
-            print "ERROR! All html-files must have unique names to make possible to use them like Handlebars templates"
+            msg = "All html-files must have unique names to make possible to use them like templates"
             for file_name in duplicates:
-                print "Check conflict: ", file_name
-                print "Files: ", [remove_build_path(f) for f in find_files_by_name(BUILD_DIRECTORY_NAME, file_name)]
-            return False
+                duplicates_path = [remove_build_path(f) for f in files_by_name_without_ext(module_directory, file_name)]
+                msg += "\n\tConflict in '" + file_name + "'"
+                msg += "\tFiles: " + duplicates_path.__str__()
+            raise NameError(msg)
 
-        html_directories = []
-        for (dir_path, dir_names, file_names) in os.walk(BUILD_DIRECTORY_NAME):
-            if path.basename(path.normpath(dir_path)) in template_extensions and dir_path not in html_directories:
-                html_directories.append(dir_path)
+        if not html_file_names:
+            return True
 
-        for html_dir in html_directories:
-            files = find_files_recursive(html_dir, templates_re)
-            new_path = path.dirname(html_dir)
-            for file_name in files:
-                shutil.move(file_name, path.join(new_path, path.basename(file_name)))
-            delete_folder(html_dir)
+        new_file_names = []
+        html_file_extensions = set([path.splitext(f)[1] for f in html_files])
+        for ext in FileExtensions.TEMPLATES:
+            if "." + ext in html_file_extensions:
+                new_file_name = FileName.TEMPLATE + "." + ext + FileName.TEMPLATE_EXT
+                path_to = path.join(module_directory, new_file_name)
+                if path.exists(path_to):
+                    raise NameError("Don't use " + new_file_name + " in file names. Name is reserved.")
+                call("handlebars " + module_directory + " -f " + path_to + " -e " + ext, shell=True)
+                new_file_names.append(new_file_name)
 
-        directories_with_template_files = set()
+        delete_directories(module_directory, Directories.HTML)
+        delete_files_recursive(module_directory, templates_re)
 
-        for ext in template_extensions:
-            directories_with_html_files = []
-            for (dir_path, dir_names, file_names) in os.walk(BUILD_DIRECTORY_NAME):
-                if dir_path in directories_with_html_files:
-                    continue
-                for file_name in file_names:
-                    if dir_path in directories_with_html_files:
-                        break
-                    if file_ext(file_name) == ext:
-                        directories_with_html_files.append(dir_path)
-
-            if directories_with_html_files:
-                directories_with_template_files.update(directories_with_html_files)
-
-                for directory in directories_with_html_files:
-                    path_from = path.join(directory, "*." + ext)
-                    new_file_name = "__handlebars." + ext + ".js"
-                    path_to = path.join(directory, new_file_name)
-                    if path.exists(path_to):
-                        raise NameError("Don't use " + new_file_name + " in file names. Name is reserved.")
-                    compile_templates_command = "handlebars " + path_from + " -f " + path_to + " -e " + ext
-                    call(compile_templates_command, shell=True)
-
-        delete_files_recursive(BUILD_DIRECTORY_NAME, templates_re)
-
-        file_names_to_merge = ["__handlebars." + ext + ".js" for ext in template_extensions]
-
-        for directory_with_templates in directories_with_template_files:
-            new_path = path.join(directory_with_templates, "__handlebars.js")
-            print new_path
-            if path.exists(new_path):
-                raise NameError("Don't use __handlebars.js in file names. Name is reserved.")
-            concat_files_in_directory(new_path,  directory_with_templates, file_names_to_merge)
+        new_path = path.join(module_directory, FileName.TEMPLATE_NAME)
+        if path.exists(new_path):
+            raise NameError("Don't use " + FileName.TEMPLATE_NAME + " in file names. Name is reserved.")
+        concat_files_in_directory(new_path, module_directory, new_file_names)
 
     except NameError as e:
         print("ERROR: " + e.message)
         return False
 
     return True
+
+
+def run():
+    print "\n\n"
+    create_build_directory()
+
+    module_directories = get_module_directories()
+    for module_directory in module_directories:
+        if not compile_html(module_directory):
+            return False
+
+    if not compile_html(Directories.BUILD_CONTENT):
+        return False
+
+    print module_directories
+
+    return 0
 
 
 run()
