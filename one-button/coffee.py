@@ -21,7 +21,7 @@ class Directories:
     COFFEE = ["coffeeScript", "coffee"]
     TYPE_SCRIPT = ["typeScript", "ts"]
     STYLES = ["css", "less"]
-    RESOURCES = ["res", "asserts", "raw"]
+    RESOURCES = ["res", "asserts", "raw", "values", "strings"]
     PROJECT_FOLDERS = HTML + CODE + COFFEE + TYPE_SCRIPT + STYLES + RESOURCES + LIBS
 
 
@@ -30,6 +30,14 @@ class FileExtensions:
         pass
 
     TEMPLATES = ["html", "handlebars", "hb"]
+    CSS = "css"
+    CSS_STYLES = [CSS]
+    LESS = "less"
+    LESS_STYLES = [LESS]
+
+    @staticmethod
+    def find_re(extensions):
+        return ".*\.(" + ('|'.join(map(str, extensions))) + ")$"
 
 
 class FileName:
@@ -39,6 +47,8 @@ class FileName:
     TEMPLATE = "__handlebars"
     TEMPLATE_EXT = ".js"
     TEMPLATE_NAME = TEMPLATE + TEMPLATE_EXT
+
+    STYLES_NAME = "__styles.css"
 
 
 def remove_build_path(my_path):
@@ -102,6 +112,11 @@ def file_ext(file_name):
     return file_extension
 
 
+def get_file_name(file_name):
+    file_name, file_extension = os.path.splitext(file_name)
+    return file_name
+
+
 def file_ext_in(file_name, extensions):
     return file_ext(file_name) in extensions
 
@@ -159,65 +174,97 @@ def get_module_directories():
 
 
 def compile_html(module_directory):
+    html_files = get_files_recursive(module_directory, FileExtensions.find_re(FileExtensions.TEMPLATES))
+    html_file_names = [path.splitext(f)[0] for f in html_files]
+
+    duplicates = [item for item, count in collections.Counter(html_file_names).items() if count > 1]
+    if duplicates:
+        msg = "All html-files must have unique names to make possible to use them like templates"
+        for file_name in duplicates:
+            duplicates_path = [remove_build_path(f) for f in files_by_name_without_ext(module_directory, file_name)]
+            msg += "\n\tConflict in '" + file_name + "'"
+            msg += "\tFiles: " + duplicates_path.__str__()
+        raise NameError(msg)
+
+    if not html_file_names:
+        return True
+
+    new_file_names = []
+    html_file_extensions = set([path.splitext(f)[1] for f in html_files])
+    for ext in FileExtensions.TEMPLATES:
+        if "." + ext in html_file_extensions:
+            new_file_name = FileName.TEMPLATE + "." + ext + FileName.TEMPLATE_EXT
+            path_to = path.join(module_directory, new_file_name)
+            if path.exists(path_to):
+                raise NameError("Don't use " + new_file_name + " in file names. Name is reserved.")
+            call("handlebars " + module_directory + " -f " + path_to + " -e " + ext, shell=True)
+            new_file_names.append(new_file_name)
+
+    delete_directories(module_directory, Directories.HTML)
+    delete_files_recursive(module_directory, FileExtensions.find_re(FileExtensions.TEMPLATES))
+
+    new_path = path.join(module_directory, FileName.TEMPLATE_NAME)
+    if path.exists(new_path):
+        raise NameError("Don't use " + FileName.TEMPLATE_NAME + " in file names. Name is reserved.")
+    concat_files_in_directory(new_path, module_directory, new_file_names)
+    return True
+
+
+def convert_css_to_js(path_to_file):
+    if path.exists(path_to_file):
+        output_path = path_to_file + ".js"
+        delete_files([output_path])
+        with open(output_path, 'w') as outfile:
+            with open(path_to_file) as infile:
+                outfile.write("$(\"head\").prepend(\"<style>\"\n")
+                file_str = infile.read()
+                outfile.write("+ \"" + file_str.replace("\"", "\\\"").replace("\n", "\"\n+ \"") + "\"\n")
+                outfile.write("+ \"</style>\");")
+
+        delete_files([path_to_file])
+    else:
+        raise IndentationError("Can't find created " + FileName.STYLES_NAME + " file")
+
+
+def compile_styles(module_directory):
+    less_files = find_files_recursive(module_directory, FileExtensions.find_re(FileExtensions.LESS_STYLES))
+    if less_files:
+        for less_file in less_files:
+            path_to = less_file + "." + FileExtensions.CSS
+            if path.exists(path_to):
+                raise NameError("Don't use " + get_file_name(less_file) + " in css-file names")
+            call("lessc " + less_file + " " + path_to, shell=True)
+        delete_files_recursive(module_directory, FileExtensions.find_re(FileExtensions.LESS_STYLES))
+    style_files = find_files_recursive(module_directory, FileExtensions.find_re(FileExtensions.CSS_STYLES))
+    if style_files:
+        style_file = path.join(module_directory, FileName.STYLES_NAME)
+        if path.exists(style_file):
+            raise NameError("Don't use " + FileName.STYLES_NAME + " in css-file names")
+        concat_files(style_file, style_files)
+        convert_css_to_js(style_file)
+    delete_directories(module_directory, Directories.STYLES)
+    return True
+
+
+def run():
+    print "\n\n"
+
     try:
 
-        templates_re = ".*\.(" + ('|'.join(map(str, FileExtensions.TEMPLATES))) + ")$"
-        html_files = get_files_recursive(module_directory, templates_re)
-        html_file_names = [path.splitext(f)[0] for f in html_files]
+        create_build_directory()
 
-        duplicates = [item for item, count in collections.Counter(html_file_names).items() if count > 1]
-        if duplicates:
-            msg = "All html-files must have unique names to make possible to use them like templates"
-            for file_name in duplicates:
-                duplicates_path = [remove_build_path(f) for f in files_by_name_without_ext(module_directory, file_name)]
-                msg += "\n\tConflict in '" + file_name + "'"
-                msg += "\tFiles: " + duplicates_path.__str__()
-            raise NameError(msg)
+        for module_directory in get_module_directories():
+            compile_html(module_directory)
+            compile_styles(module_directory)
 
-        if not html_file_names:
-            return True
-
-        new_file_names = []
-        html_file_extensions = set([path.splitext(f)[1] for f in html_files])
-        for ext in FileExtensions.TEMPLATES:
-            if "." + ext in html_file_extensions:
-                new_file_name = FileName.TEMPLATE + "." + ext + FileName.TEMPLATE_EXT
-                path_to = path.join(module_directory, new_file_name)
-                if path.exists(path_to):
-                    raise NameError("Don't use " + new_file_name + " in file names. Name is reserved.")
-                call("handlebars " + module_directory + " -f " + path_to + " -e " + ext, shell=True)
-                new_file_names.append(new_file_name)
-
-        delete_directories(module_directory, Directories.HTML)
-        delete_files_recursive(module_directory, templates_re)
-
-        new_path = path.join(module_directory, FileName.TEMPLATE_NAME)
-        if path.exists(new_path):
-            raise NameError("Don't use " + FileName.TEMPLATE_NAME + " in file names. Name is reserved.")
-        concat_files_in_directory(new_path, module_directory, new_file_names)
+        compile_html(Directories.BUILD_CONTENT)
+        compile_styles(Directories.BUILD_CONTENT)
 
     except NameError as e:
         print("ERROR: " + e.message)
         return False
 
     return True
-
-
-def run():
-    print "\n\n"
-    create_build_directory()
-
-    module_directories = get_module_directories()
-    for module_directory in module_directories:
-        if not compile_html(module_directory):
-            return False
-
-    if not compile_html(Directories.BUILD_CONTENT):
-        return False
-
-    print module_directories
-
-    return 0
 
 
 run()
