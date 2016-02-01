@@ -1,14 +1,10 @@
+#include https://github.com/*/commits*
+
 ((GithubExtension) ->
   
-  isFirstTimeClick = yes
-  
-  GithubExtension.onClick = ->
-    
-    url = window.location.toString()
-    
-    if url.indexOf('github') > 0 and url.indexOf('commits') > 0 and isFirstTimeClick
+  GithubExtension.onceOnClick = ->
       
-      isFirstTimeClick = no
+      console.log 'onceOnClick', $?, Handlebars
       
       $('body').css('margin-top', '120px').prepend Handlebars.templates.git_commits_box()
       
@@ -118,4 +114,4 @@
         
         Commits.drawAuthors()
 
-)(window.oneButton.extension("GithubExtension"))
+)(OButton.GithubExtension ?= {})

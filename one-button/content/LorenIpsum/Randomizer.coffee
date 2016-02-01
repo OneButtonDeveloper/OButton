@@ -1,3 +1,5 @@
+#require shortcut
+
 ((LorenIpsum) ->
 
   class Randomizer
@@ -7,12 +9,15 @@
     @get: =>
       @randomizer ?= new Randomizer()
 
-  handlers = {}
-  handlers.input = ($el) ->
-    $el.val Randomizer.get().getMeat()
+  LorenIpsum.initialize = ->
+    console.log 'initialize'
+    handlers = {}
+    handlers.input = ($el) ->
+      $el.val Randomizer.get().getMeat()
+  
+    shortcut.add "Alt+F1", ->
+      if el = document.activeElement
+        handlers[el.tagName.toLowerCase()]? $ el
+    console.log 'initialize2'
 
-  shortcut.add "Alt+F1", ->
-    if el = document.activeElement
-      handlers[el.tagName.toLowerCase()]? $ el
-
-)(window.oneButton.extension("LorenIpsum"))
+)(OButton.LorenIpsum ?= {})

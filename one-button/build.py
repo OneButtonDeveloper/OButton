@@ -212,6 +212,12 @@ def compile_html(module_directory):
     if not html_file_names:
         return True
 
+    # move all templates to upper level to skip "folder names in template names"
+    template_files = find_files_recursive(module_directory, FileExtensions.find_re(FileExtensions.TEMPLATES))
+    for template_file in template_files:
+        new_template_file_name = path.join(module_directory, path.basename(template_file))
+        shutil.move(template_file, new_template_file_name)
+
     new_file_names = []
     html_file_extensions = set([path.splitext(f)[1] for f in html_files])
     for ext in FileExtensions.TEMPLATES:
@@ -302,6 +308,7 @@ def compile_code(module_directory):
         call("tsc " + " ".join(type_script_files), shell=True)
         delete_files(type_script_files)
 
+    # TODO: add sorting that depends on path and file name
     js_files = []
     js_files.extend(get_files_in_folder(module_directory, FileExtensions.find_re(FileExtensions.JS)))
     for code_dir in Directories.CODE:
@@ -500,7 +507,7 @@ def run():
         common_path = path.join("src", "common")
         for dir_to_remove in get_directories_from(common_path):
             if dir_to_remove != "icons":
-                delete_directory(dir_to_remove)
+                delete_directory(path.join(common_path, dir_to_remove))
 
         delete_files(find_files_in_folder(common_path))
 

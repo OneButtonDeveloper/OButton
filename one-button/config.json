@@ -10,5 +10,5 @@
         "caption": "Do what i want!"
     },
     "background_scripts": ["background.js"],
-    "content_scripts": [ "_AtTheBeginning.meta.js", "GithubExtension.gen.meta.js", "LorenIpsum.gen.meta.js", "_AtTheEnd.meta.js" ]
+    "content_scripts": [ "%content_scripts%" ]
 }
