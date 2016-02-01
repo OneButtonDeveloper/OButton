@@ -2,9 +2,11 @@ import re
 import os
 import shutil
 import collections
+from time import sleep
 from distutils.dir_util import copy_tree
 from os import path
 from subprocess import call
+from subprocess import Popen
 
 
 class Directories:
@@ -415,7 +417,6 @@ def run():
     print "\n\n"
 
     try:
-
         create_build_directory()
 
         content_scripts = []
@@ -515,6 +516,18 @@ def run():
         copy_tree(Directories.BUILD_CONTENT, common_path)
 
         call("python ../kango-framework-latest/kango.py build ./", shell=True)
+
+        built_extensions = find_files_recursive("output", FileExtensions.find_re(["xpi"]))
+
+        firefox_path = "/Users/andrew/Library/Application Support/Firefox/Profiles/tjuau6hd.dev-edition-default"
+        extension_path = firefox_path + "/extensions/{862FF4F2-E810-11E0-8FEF-D73D4824019B}.xpi"
+        if path.exists(firefox_path) and len(built_extensions) == 1:
+            built_extension = built_extensions[0]
+            delete_files([extension_path])
+            shutil.copyfile(built_extension, extension_path)
+            call("killall firefox", shell=True)
+            sleep(2)
+            Popen(["open", "-a", "FirefoxDeveloperEdition"])
 
     except NameError as e:
         print("ERROR: " + e.message)
