@@ -1,0 +1,32 @@
+{
+  "name": "OButton",
+  "description": "Crossbrowser extension",
+  "version": "0.0.1",
+  "author": {
+    "name": "One Button Developer",
+    "email": "one.button.developer@gmail.com"
+  },
+  "homepage": "https://github.com/OneButtonDeveloper/OButton",
+  "contributors":[],
+  "dependencies": {},
+  "devDependencies": {
+    "coffee-script": "*",
+    "typescript":"*",
+    "less": "*",
+    "handlebars": "*",
+    "webpack":"*"
+  },
+  "keywords": [
+    "framework",
+    "plugin",
+    "extension",
+    "browser"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OneButtonDeveloper/OButton.git"
+  },
+  "engines": {
+    "node": ">=0.8.0"
+  }
+}
