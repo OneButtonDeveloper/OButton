@@ -72,6 +72,32 @@ class ModuleSetting:
     REQUIRE_SETTING = re.compile("^(//+|#+)require\s")
 
 
+class CompileCommand:
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def handlebars(module_directory, path_to, ext):
+        bin_path = path.join("..", "node_modules", "handlebars", "bin", "handlebars")
+        return "%s %s -f %s -e %s" % (bin_path, module_directory, path_to, ext)
+
+    @staticmethod
+    def less(less_file, path_to):
+        bin_path = path.join("..", "node_modules", "less", "bin", "lessc")
+        return "%s %s %s" % (bin_path, less_file, path_to)
+
+    @staticmethod
+    def coffee(module_directory):
+        bin_path = path.join("..", "node_modules", "coffee-script", "bin", "coffee")
+        return "%s --compile %s" % (bin_path, module_directory)
+
+    @staticmethod
+    def type_script(type_script_files):
+        bin_path = path.join("..", "node_modules", "typescript", "bin", "tsc")
+        return "%s %s" % (bin_path, " ".join(type_script_files))
+
+
 def remove_build_path(my_path):
     return re.sub('^' + Directories.BUILD, '', my_path)
 
@@ -228,7 +254,7 @@ def compile_html(module_directory):
             path_to = path.join(module_directory, new_file_name)
             if path.exists(path_to):
                 raise NameError("Don't use " + new_file_name + " in file names. Name is reserved.")
-            call("handlebars " + module_directory + " -f " + path_to + " -e " + ext, shell=True)
+            call(CompileCommand.handlebars(module_directory, path_to, ext), shell=True)
             new_file_names.append(new_file_name)
 
     delete_directories(module_directory, Directories.HTML)
@@ -264,7 +290,7 @@ def compile_styles(module_directory):
             path_to = less_file + "." + FileExtensions.CSS
             if path.exists(path_to):
                 raise NameError("Don't use " + get_file_name(less_file) + " in css-file names")
-            call("lessc " + less_file + " " + path_to, shell=True)
+            call(CompileCommand.less(less_file, path_to), shell=True)
         delete_files_recursive(module_directory, FileExtensions.find_re(FileExtensions.LESS_STYLES))
     style_files = find_files_recursive(module_directory, FileExtensions.find_re(FileExtensions.CSS_STYLES))
     if style_files:
@@ -302,12 +328,12 @@ def read_module_settings_from_file(file_with_code):
 def compile_code(module_directory):
     coffee_files = find_files_recursive(module_directory, FileExtensions.find_re(FileExtensions.COFFEE))
     if coffee_files:
-        call("coffee --compile " + module_directory, shell=True)
+        call(CompileCommand.coffee(module_directory), shell=True)
         delete_files(coffee_files)
 
     type_script_files = find_files_recursive(module_directory, FileExtensions.find_re(FileExtensions.TYPE_SCRIPT))
     if type_script_files:
-        call("tsc " + " ".join(type_script_files), shell=True)
+        call(CompileCommand.type_script(type_script_files), shell=True)
         delete_files(type_script_files)
 
     # TODO: add sorting that depends on path and file name
@@ -444,14 +470,14 @@ def run():
             js_file_module = ""
 
             if coffee_pattern_re.match(module_file):
-                call("coffee --compile " + module_file, shell=True)
+                call(CompileCommand.coffee(module_file), shell=True)
                 delete_files([module_file])
                 js_file_module = re.sub("\.[^.]+$", ".js", module_file)
                 if not path.exists(js_file_module):
                     raise RuntimeError("Can't compile file: " + module_file)
 
             if type_script_pattern_re.match(module_file):
-                call("tsc " + module_file, shell=True)
+                call(CompileCommand.type_script([module_file]), shell=True)
                 delete_files([module_file])
                 js_file_module = re.sub("\.[^.]+$", ".js", module_file)
                 if not path.exists(js_file_module):
