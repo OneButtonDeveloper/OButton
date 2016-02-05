@@ -1,10 +1,10 @@
 import sys
+import re
 from os import path
 from subprocess import call
 
 
 class CompileCommand:
-
     def __init__(self):
         pass
 
@@ -14,12 +14,15 @@ class CompileCommand:
         return "%s -b -c %s" % (bin_path, module_directory)
 
     @staticmethod
-    def webpack(params):
+    def webpack(params, args=[]):
         bin_path = path.join("node_modules", "webpack", "bin", "webpack.js")
+        result = []
         if params:
-            return "{} {}".format(params, bin_path)
-        else:
-            return bin_path
+            result.append(params)
+        result.append(bin_path)
+        if args:
+            result.append(" ".join(args))
+        return " ".join(result)
 
 
 class WebPackParam:
@@ -46,15 +49,28 @@ def run():
     params = WebPackParam()
     if [arg for arg in WebPackParam.DEVELOPMENT if arg in args]:
         params.set_param(WebPackParam.BUILD_TYPE, 'development')
+        er = '--display-error-details'  # --display-modules --display-reasons
+        if er not in args:
+            args.append(er)
     if [arg for arg in WebPackParam.PRODUCTION if arg in args]:
         params.set_param(WebPackParam.BUILD_TYPE, 'production')
 
-    args = [arg for arg in WebPackParam.BUILD_TYPE_VALUES if arg not in args]
-    if len(args) == 1:
-        params.set_param(WebPackParam.MODULE_NAME, args[0])
+    args = [arg for arg in args if arg not in WebPackParam.BUILD_TYPE_VALUES]
+
+    module_arg = ""
+    for arg in args:
+        if re.compile('^[^-].+$').match(arg):
+            params.set_param(WebPackParam.MODULE_NAME, arg)
+            module_arg = arg
+            break
+    if module_arg:
+        args.remove(module_arg)
 
     call('clear', shell=True)
     call(CompileCommand.coffee("webpack.config.coffee"), shell=True)
-    call(CompileCommand.webpack(params.join()), shell=True)
+    compileCommand = CompileCommand.webpack(params.join(), args)
+    print compileCommand
+    call(compileCommand, shell=True)
+
 
 run()
