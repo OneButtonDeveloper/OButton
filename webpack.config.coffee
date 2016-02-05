@@ -23,28 +23,52 @@ class ProductionBuildTypeResolver extends BuildTypeResolver
 
 buildTypeResolver = BuildTypeResolver.create(BUILD_TYPE)
 
+input_dir = '/one-button/content'
+build_dir = '/one-button/build-wp'
+output_dir = build_dir + '/content'
+
+#plugin will allow use watch: true and hot-reloading for debugging separate modules
+class TestPlugin
+  apply: (compiler) ->
+    compiler.plugin "compile", (params) ->
+      console.log "The compiler is starting to compile..."
+
+    compiler.plugin "emit", (compilation, callback) ->
+      console.log "The compilation is going to emit files..."
+      callback();
+
+    compiler.plugin "done",  ->
+      console.log "Done"
+
+CleanWebpackPlugin = require 'clean-webpack-plugin'
+
 module.exports =
   # path to entry points
-  context: __dirname + "/test"
+  context: __dirname + input_dir
   entry:
-    test: ["./test00", "./test"]
+    GithubExtension: "./GithubExtension/GithubExtension.coffee"
+    LorenIpsum: "./LorenIpsum/Randomizer.coffee"
   output:
-    path: __dirname + "/test/build"
-    filename: "[name].js"
-    library: "[name]"
+    path: __dirname + output_dir
+    filename: "[name].gen.js"
   devtool: buildTypeResolver.getDevTool()
   plugins: [
-    new webpack.NoErrorsPlugin() # don't create files if build has errors
+    new CleanWebpackPlugin __dirname + build_dir
+    new webpack.NoErrorsPlugin()
+    new webpack.optimize.CommonsChunkPlugin
+      name: "Common"
+      minChunks: 2
+    new TestPlugin()
   ]
-  # require('<lib>') ≈ var externals[<lib>];
-  externals: {
-    "jQuery": "$"
-    "OButton": "OButton"
-    "kango": "kango"
-  }
-  module: {
-    loaders: []
-    #noParse: /regExp/ - modules that will be ignored of webpack-compiler (not looking for "require" in files)
-  }
+  module:
+    loaders: [
+      { test: /\.coffee$/, loader: "coffee-loader" }
+      { test: /\.(coffee\.md|litcoffee)$/, loader: "coffee-loader?literate" }
+      { test: /\.css$/, loader: "style!css" }
+      { test: /\.less$/, loader: "style!css!less" }
+      { test: /\.(handlebars|html)$/, loader: "handlebars-template-loader" }
+      { test: /\.tsx?$/, loader: 'ts-loader' }
+      { test: /\.(png|jpg|svg|ttf|eot|woff|woff2)$/, loader: 'url?name=[name].[ext]' }
+    ]
 
 buildTypeResolver.compressPlugin(module.exports)

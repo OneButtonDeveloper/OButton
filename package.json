@@ -11,10 +11,20 @@
   "dependencies": {},
   "devDependencies": {
     "coffee-script": "*",
-    "typescript":"*",
+    "webpack":"*",
+    "coffee-loader": "*",
     "less": "*",
+    "less-loader": "*",
+    "typescript": "*",
     "handlebars": "*",
-    "webpack":"*"
+    "handlebars-loader": "*",
+    "style-loader": "*",
+    "css-loader": "0.18.0",
+    "ts-loader": "*",
+    "handlebars-template-loader": "*",
+    "exports-loader": "*",
+    "imports-loader": "*",
+    "clean-webpack-plugin": "*"
   },
   "keywords": [
     "framework",
@@ -27,6 +37,6 @@
     "url": "https://github.com/OneButtonDeveloper/OButton.git"
   },
   "engines": {
-    "node": ">=0.8.0"
+    "node": ">=0.10.40"
   }
 }
