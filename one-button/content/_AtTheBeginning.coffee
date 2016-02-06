@@ -1,12 +1,15 @@
 # Script that will run at the beginning
 
 # Global libs that will be available in all modules
-#require jquery.min
-#require handlebars.min
+# require jquery.min
 
 # initialization of a OButton
 window.OButton ?= {}
 
 window.$ = window.$.noConflict(true)
 
-console.log 'Main.js: JQuery ' + $.fn.jquery + ' Handlebars: ' + Handlebars.VERSION
+# TODO: made polifill for keys() function
+window.requireAll = (r) ->
+  r.keys().forEach(r)
+
+console.log 'JQuery ' + $.fn.jquery

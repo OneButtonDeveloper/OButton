@@ -9,6 +9,6 @@
         "tooltipText": "Do what i want!",
         "caption": "Do what i want!"
     },
-    "background_scripts": [ "%background_scripts%"],
+    "background_scripts": [ "%background_scripts%" ],
     "content_scripts": [ "%content_scripts%" ]
 }

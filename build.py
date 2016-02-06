@@ -74,9 +74,6 @@ def run():
     params = WebPackParam()
     if [arg for arg in WebPackParam.DEVELOPMENT if arg in args]:
         params.set_param(WebPackParam.BUILD_TYPE, 'development')
-        er = '--display-error-details'  # --display-modules --display-reasons
-        if er not in args:
-            args.append(er)
     if [arg for arg in WebPackParam.PRODUCTION if arg in args]:
         params.set_param(WebPackParam.BUILD_TYPE, 'production')
 
@@ -93,8 +90,8 @@ def run():
 
     call('clear', shell=True)
     compile_coffee_config()
-    compile_command = CompileCommand.webpack(params.join(), args)
-    print compile_command
-    call(compile_command, shell=True)
+    call(CompileCommand.webpack(params.join(), args), shell=True)
+    call("python ./kango-framework-latest/kango.py build ./one-button", shell=True)
+
 
 run()

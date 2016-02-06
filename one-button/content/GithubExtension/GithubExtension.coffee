@@ -1,17 +1,21 @@
-#include https://github.com/*/commits*
+#include https://github.com/*
 
 ((GithubExtension) ->
-  
+
+  GithubExtension.urlRegEx = /^https:..github.com(.*)commits(.*)$/
+
   GithubExtension.onceOnClick = ->
-      
-      console.log 'onceOnClick', $?, Handlebars
-      
-      $('body').css('margin-top', '120px').prepend Handlebars.templates.git_commits_box()
-      
+
+      console.log 'onceOnClick', $?
+      requireAll require.context('./css', true, /\.(less|css)$/)
+      git_commits_box  = require('./html/commits_box.html')
+
+      $('body').css('margin-top', '120px').prepend git_commits_box()
+
       class Commits
         @commits = {}
         @authors = {}
-      
+
         @put: (day, author, commit) ->
           commits = Commits.commits
           day = commits[day] ?= {}
@@ -25,7 +29,7 @@
             commitsOfAuthor.push commit
             Commits.authors[author] ?= 0
             Commits.authors[author] += 1
-        
+
         @print: ->
           days = for day, value of Commits.commits
             day
@@ -45,43 +49,43 @@
                 result += '\n' + comits.join('. ') + '.'
             result += '\n\n'
           return result
-        
+
         @drawAuthors: ->
           $stat = $('#stat0304').empty()
           for author, count of Commits.authors
             $stat.append '<tr><td style="letter-spacing: 1px; font-weight: 300;"> ' + author + ' </td><td style="text-align: center;"> – </td><td style="font-weight: 300;"> ' + count + ' </td></tr>'
-        
+
         @drawPrint: ->
           $("#commits0304").val Commits.print()
           $('#commits0304').focus().select()
           document.execCommand('copy');
-        
+
         @clear: ->
           Commits.commits = {}
           Commits.authors = {}
           $("#commits0304").val('')
           $('#stat0304').empty()
-      
+
       $('#clear0304').on 'click', -> Commits.clear()
       $('#print0304').on 'click', -> Commits.drawPrint()
-      
+
       class Day
         @monthsNames = "Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec".split('_')
         @monthsNumbers = "01_02_03_04_05_06_07_08_09_10_11_12".split('_')
-        
+
         monthNumber: (mmm) ->
           unless Day.month
             Day.month = {}
             for i in [0...12] by 1
               Day.month[Day.monthsNames[i]] = Day.monthsNumbers[i]
           return Day.month[mmm]
-        
+
         constructor: (title) ->
           titleParts = title.replace(',','').split(' ').reverse()
           day = titleParts[1]
           if day and day.length < 2 then day = '0' + day
           @title = titleParts[0] + '-' + @monthNumber(titleParts[2]) + '-' + day
-        
+
         addCommit: (author, text) ->
           if text
             lines = text.split('\n')
@@ -95,7 +99,7 @@
                     break
               if result and result.length > 0
                 Commits.put @title, author, result.replace(/\.\s*$/, "").replace('  ','')
-      
+
       $('#parse0304').on 'click', ->
         result = []
         day = null
@@ -111,7 +115,7 @@
                 text = $com.find('.commit-title .message').first().attr('title').trim()
                 author = $com.find('.commit-author').first().text()
                 day.addCommit author, text
-        
+
         Commits.drawAuthors()
 
 )(OButton.GithubExtension ?= {})

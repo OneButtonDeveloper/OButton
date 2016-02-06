@@ -10,14 +10,15 @@
       @randomizer ?= new Randomizer()
 
   LorenIpsum.initialize = ->
-    console.log 'initialize'
+    #git_commits_box  = require('./html/commits_box.html')
+    shortcut = require('exports?shortcut!./libs/shortcut.js')
+
     handlers = {}
     handlers.input = ($el) ->
       $el.val Randomizer.get().getMeat()
-  
+
     shortcut.add "Alt+F1", ->
       if el = document.activeElement
         handlers[el.tagName.toLowerCase()]? $ el
-    console.log 'initialize2'
 
 )(OButton.LorenIpsum ?= {})

@@ -128,13 +128,15 @@ class WebPackUtils.MetadataPlugin
   DEFAULT_INCLUDES = [ "http://*", "https://*", "about:blank" ]
 
   constructor: (options = {}) ->
-    { @outputPath, @inputDirectory, entries, commonJsFileName, @generatedModuleExtension } = options
+    { @outputPath, @inputDirectory, @rootDirectory, @metadataExtension, entries, commonJsFileName, generatedModuleExtension } = options
     @entries = {}
     for moduleName, sourcePath of entries
       @entries[moduleName] =
-        fileName: moduleName + '.' + @generatedModuleExtension
+        moduleName: moduleName
+        fileName: moduleName + '.' + generatedModuleExtension
         sourcePath: sourcePath
-    @commonJsFileName = commonJsFileName + '.' + @generatedModuleExtension
+    @commonJsModuleName = commonJsFileName
+    @commonJsFileName = commonJsFileName + '.' + generatedModuleExtension
 
   clearSetting: (setting) ->
     setting.replace(@SETTING_PREFIX, "").trim()
@@ -155,30 +157,32 @@ class WebPackUtils.MetadataPlugin
             includes: if includes.length <= 0 then DEFAULT_INCLUDES else includes
             sourcePath: sourcePath
             fileName: options.fileName
+            moduleName: options.moduleName
             requires: requires
       @createFileFromMetadata
+        moduleName: @commonJsModuleName
         fileName: @commonJsFileName
         includes: DEFAULT_INCLUDES
         sourcePath: path.join @outputPath, @commonJsFileName
 
   createFileFromMetadata: (metadata) =>
-    { fileName, includes, requires, sourcePath } = metadata
+    { fileName, includes, requires, sourcePath, moduleName } = metadata
     requires = @resolvePathToLibs sourcePath, requires
     metadata = '// ==UserScript==' + os.EOL
     for include in includes
       metadata += '// @include ' + include + os.EOL
     for lib in requires
       metadata += '// @require ' + lib + os.EOL
-    metadata += '// @require ' + fileName + os.EOL
+    metadata += '// @require ' + path.join(@inputDirectory, fileName) + os.EOL
     metadata += '// ==/UserScript==' + os.EOL
-    fileUtils.createFile path.join(@outputPath, path.basename(fileName, @generatedModuleExtension) + 'meta.js'), metadata
+    fileUtils.createFile path.join(@outputPath, moduleName + '.' + @metadataExtension), metadata
 
   resolvePathToLibs: (sourcePath, requires = []) ->
     libs = []
     for lib in requires
       pathToLib = @resolvePathToLib sourcePath, lib
-      shortPath = pathToLib.substr(pathToLib.indexOf(@inputDirectory)).replace @inputDirectory + path.sep, ''
-      fileUtils.copyFileTo pathToLib, path.join @outputPath, shortPath
+      shortPath = pathToLib.replace @rootDirectory + path.sep, ''
+      fileUtils.copyFileTo pathToLib, path.join @outputPath, shortPath.replace @inputDirectory + path.sep, ''
       libs.push shortPath
     libs
 
@@ -186,48 +190,53 @@ class WebPackUtils.MetadataPlugin
     lib = if lib.indexOf('.js') <= 0 then lib + '.js' else lib
     level = 2
     root = sourcePath
-    #@inputDirectory
     while level > 0
       root = path.dirname root
       currentPath = path.join root, 'libs', lib
-      if currentPath.indexOf(@inputDirectory) > 0
-        if fileUtils.fileExists currentPath
-          return currentPath
+      if fileUtils.fileExists currentPath
+        return currentPath
       currentPath = path.join root, lib
-      if currentPath.indexOf(@inputDirectory) > 0
-        if fileUtils.fileExists currentPath
-          return currentPath
+      if fileUtils.fileExists currentPath
+        return currentPath
       level--
     throw "ERROR! Impossible to find library #{lib} for #{sourcePath}"
+
 
 # TODO: use the same Plugin to store all variables inside
 class WebPackUtils.ExtesionConfigPlugin
   priority:
-    _AtTheBeginning: 0
-#   commonJsFileName: 1
+#   commonJsFileName: 0
+    _AtTheBeginning: 1
 #   otherJsFileNames: 2
     _AtTheEnd: 3
+
+  scripts: {}
+  foldersCompiled: 0
 
   sortValue: (value) -> (@priority[value] ? 2) + value
 
   constructor: (options = {}) ->
     # @outputPath where new config must be
-    # @inputDirectory for replace according row in the config file
-    # @extensionConfig for duplicate the config file if not exists
-    { @outputPath, @inputDirectory, @extensionConfig, entries, generatedModuleExtension, commonJsFileName } = options
-    @priority[commonJsFileName] = 1
-    @fileNames = (key for key, value of entries)
-    @fileNames.push commonJsFileName
-    @fileNames.sort (value1, value2) => @sortValue(value1).localeCompare @sortValue(value2)
-    @entries = {}
-    for fileName in @fileNames
-      @entries[fileName] =
-        fileName: fileName + generatedModuleExtension
-        filePath: entries[fileName]
+    { @outputPath, @extensionConfig, @commonJsFileName, @inputDirectories, @configEncoding } = options
+    @priority[@commonJsFileName] = 0
+    #
+
+  setOptions: (options) ->
+    { entries, inputDirectory, hasCommonJs, fileExtension } = options
+    fileNames = (key for key, value of entries)
+    fileNames.push @commonJsFileName if hasCommonJs
+    fileNames.sort (value1, value2) => @sortValue(value1).localeCompare @sortValue(value2)
+    fileNames = for fileName in fileNames
+      path.join(inputDirectory, fileName + '.' + fileExtension)
+    @scripts[inputDirectory] = fileNames.join '", "'
+
   apply: (compiler) ->
-    compiler.plugin "compile", (params) ->
-      console.log "ExtesionConfigPlugin:The compiler is starting to compile..."
     compiler.plugin "done",  =>
-      console.log "ExtesionConfigPlugin:Done", @fileNames, @entries
+      unless ++@foldersCompiled == @inputDirectories.length then return
+      configFileContent = fs.readFileSync @extensionConfig, @configEncoding
+      for key, value of @scripts
+        configFileContent = configFileContent.replace "%#{key}_scripts%", value
+      fileUtils.createFile path.join(@outputPath, 'extension_info.json'), configFileContent
+
 
 module.exports = WebPackUtils
