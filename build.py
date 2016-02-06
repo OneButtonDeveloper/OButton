@@ -1,3 +1,5 @@
+import shutil
+import os
 import sys
 import re
 from os import path
@@ -9,9 +11,9 @@ class CompileCommand:
         pass
 
     @staticmethod
-    def coffee(module_directory):
+    def coffee(config_directory, output_directory):
         bin_path = path.join("node_modules", "coffee-script", "bin", "coffee")
-        return "%s -b -c %s" % (bin_path, module_directory)
+        return "{} -o {} -b -c {} ".format(bin_path, output_directory, config_directory)
 
     @staticmethod
     def webpack(params, args=[]):
@@ -43,6 +45,29 @@ class WebPackParam:
         return " ".join([(key + "=" + self.params[key]) for key in self.params.keys()])
 
 
+def delete_files(files):
+    if type(files) is str:
+        files = [files]
+    for file_name in files:
+        if path.exists(file_name):
+            os.remove(file_name)
+
+
+def delete_directory(path_to_directory):
+    if path.exists(path_to_directory):
+        shutil.rmtree(path_to_directory)
+
+
+def compile_coffee_config():
+    config_directory = "webpack-config-builder"
+    output_directory = path.join(config_directory, "utils-js")
+    delete_directory(output_directory)
+    call(CompileCommand.coffee(config_directory, output_directory), shell=True)
+    webpack_config = "webpack.config.js"
+    delete_files(webpack_config)
+    shutil.move(path.join(output_directory, webpack_config), webpack_config)
+
+
 def run():
     sys.argv.pop(0)
     args = sys.argv
@@ -67,10 +92,9 @@ def run():
         args.remove(module_arg)
 
     call('clear', shell=True)
-    call(CompileCommand.coffee("webpack.config.coffee"), shell=True)
-    compileCommand = CompileCommand.webpack(params.join(), args)
-    print compileCommand
-    call(compileCommand, shell=True)
-
+    compile_coffee_config()
+    compile_command = CompileCommand.webpack(params.join(), args)
+    print compile_command
+    call(compile_command, shell=True)
 
 run()

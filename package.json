@@ -7,6 +7,7 @@
     "email": "one.button.developer@gmail.com"
   },
   "homepage": "https://github.com/OneButtonDeveloper/OButton",
+  "license": "MIT",
   "contributors":[],
   "dependencies": {},
   "devDependencies": {
@@ -19,12 +20,13 @@
     "handlebars": "*",
     "handlebars-loader": "*",
     "style-loader": "*",
-    "css-loader": "0.18.0",
+    "css-loader": "*",
     "ts-loader": "*",
     "handlebars-template-loader": "*",
     "exports-loader": "*",
     "imports-loader": "*",
-    "clean-webpack-plugin": "*"
+    "clean-webpack-plugin": "*",
+    "mkdirp": "*"
   },
   "keywords": [
     "framework",
@@ -37,6 +39,6 @@
     "url": "https://github.com/OneButtonDeveloper/OButton.git"
   },
   "engines": {
-    "node": ">=0.10.40"
+    "node": ">=5.5.0"
   }
 }
