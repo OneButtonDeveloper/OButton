@@ -33,8 +33,6 @@ class WebPackParam:
     PRODUCTION = ['-p', '-prod', '--product', '--production']
     BUILD_TYPE_VALUES = DEVELOPMENT + PRODUCTION
 
-    MODULE_NAME = 'MODULE_NAME'
-
     def __init__(self):
         self.params = {}
 
@@ -58,11 +56,15 @@ def delete_directory(path_to_directory):
         shutil.rmtree(path_to_directory)
 
 
+def shell(command):
+    call(command, shell=True)
+
+
 def compile_coffee_config():
     config_directory = "webpack-config-builder"
     output_directory = path.join(config_directory, "utils-js")
     delete_directory(output_directory)
-    call(CompileCommand.coffee(config_directory, output_directory), shell=True)
+    shell(CompileCommand.coffee(config_directory, output_directory))
     webpack_config = "webpack.config.js"
     delete_files(webpack_config)
     shutil.move(path.join(output_directory, webpack_config), webpack_config)
@@ -79,19 +81,10 @@ def run():
 
     args = [arg for arg in args if arg not in WebPackParam.BUILD_TYPE_VALUES]
 
-    module_arg = ""
-    for arg in args:
-        if re.compile('^[^-].+$').match(arg):
-            params.set_param(WebPackParam.MODULE_NAME, arg)
-            module_arg = arg
-            break
-    if module_arg:
-        args.remove(module_arg)
-
-    call('clear', shell=True)
+    shell('clear')
     compile_coffee_config()
-    call(CompileCommand.webpack(params.join(), args), shell=True)
-    call("python ./kango-framework-latest/kango.py build ./one-button", shell=True)
+    shell(CompileCommand.webpack(params.join(), args))
+    shell("python ./kango-framework-latest/kango.py build ./one-button")
 
 
 run()

@@ -1,104 +1,37 @@
-os = require 'os'
-fs = require 'fs'
 path = require 'path'
-mkdirp = require 'mkdirp'
-readline = require 'readline'
+chalk = require 'chalk'
 
-class FileUtils
-  walk: (context, dir, callback) ->
-    currentContext = path.join context, dir
-    results = fs.readdirSync currentContext
-    files = []
-    dirs = []
-    for f in results
-      fullPath = path.join currentContext, f
-      stat = fs.statSync fullPath
-      files.push f if stat.isFile()
-      dirs.push f if stat.isDirectory()
-    if callback context, dir, dirs, files
-      for dir in dirs
-        @walk currentContext, dir, callback
-
-  zIgroring: /^z.+/
-  isInclude: (title, options) ->
-    if (options.zIgroring ? true) and @zIgroring.test title then return false
-    if options.exclude?.test title then return false
-    return not options.include? or options.include.test title
-
-  getFiles: (context, dir, options = {}) ->
-    result = []
-    @walk context, dir, (context, dir, dirs, files) =>
-      for file in files
-        if @isInclude file, options
-          result.push path.join dir, file
-      options.isRecursive
-    result
-
-  getDirectories: (context, dir, options = {}) ->
-    result = []
-    @walk context, dir, (context, dir, dirs, files) =>
-      for directory in dirs
-        if @isInclude directory, options
-          result.push directory
-      options.isRecursive
-    result
-
-  getLines: (pathToFile, pattern, include, options, callback) ->
-    lines = []
-    lineReader = readline.createInterface
-      input: fs.createReadStream pathToFile
-    lineReader.on 'line', (line = "") ->
-      if pattern.test line
-        if include.test line
-          lines.push line
-      else
-        lineReader.close()
-    lineReader.on 'close', ->
-      callback options, lines
-
-  createFile: (pathToFile, fileContent) ->
-    fs.writeFileSync(pathToFile, fileContent)
-
-  fileExists: (filePath) ->
-    try
-      return fs.statSync(filePath).isFile()
-    catch err
-      return false
-
-  copyFileTo: (pathToFile, newPathToFile) ->
-    mkdirp.sync path.dirname newPathToFile
-    fs.createReadStream(pathToFile).pipe(fs.createWriteStream newPathToFile);
-
+FileUtils = require './file.utils'
 fileUtils = new FileUtils()
 
 WebPackUtils = {}
 
+
 class WebPackUtils.EntryResolver
-  getEntries: (options = {}) ->
-    { files, folders, context, directory } = options
-    if not files? or not files.include? then throw 'Set an files.include param of getEntities() Ex. /\.(coffee|ts|js)$/'
-    unless directory? then throw 'Set a directory param of getEntities() - folder with modules ("content")'
-    context ?= ""
+  constructor: (options = {}) ->
+    { @files, @directories, @context } = options
+    if not @files? or not @files.include? then throw chalk.red 'Set files.include param of getEntities() Ex. /\.(coffee|ts|js)$/'
+    @context ?= ""
+
+  getEntries: (directory) ->
+    unless directory? then throw chalk.red 'Set a directory param of getEntities() - directory with modules (Ex. "content")'
 
     entries = {}
-    for file in fileUtils.getFiles context, directory, files
+    for file in fileUtils.getFiles @context, directory, @files
       @setEntryTo entries, file
 
-    topDirectories = fileUtils.getDirectories context, directory, folders
-    newContext = path.join context, directory
+    topDirectories = fileUtils.getDirectories @context, directory, @directories
+    newContext = path.join @context, directory
     for topDirectory in topDirectories
-      modules = fileUtils.getFiles newContext, topDirectory, files
+      modules = fileUtils.getFiles newContext, topDirectory, @files
       index = @getIndexJs modules, topDirectory
       if index
         @setEntryTo entries, path.join(directory, index), topDirectory
     entries
 
   setEntryTo: (entries, file, directory) ->
-    name = if directory
-      directory
-    else
-      @withoutExtension path.basename file
-    entries[name] =  '.' + path.sep + file
+    name = if directory then directory else @withoutExtension path.basename file
+    entries[name] = '.' + path.sep + file
 
   withoutExtension: (fileName) ->
     fileName.replace /\.[^\.]+$/, ''
@@ -116,6 +49,7 @@ class WebPackUtils.EntryResolver
       result[@withoutExtension moduleName] = module
     result
 
+
 class WebPackUtils.MetadataPlugin
   COMMENT_OR_EMPTY_LINE: /^(((\/+|#+).*)|(\s*))$/
   SETTING: /^(\/+|#+)\s?(include|require)\s.+$/
@@ -128,63 +62,61 @@ class WebPackUtils.MetadataPlugin
   DEFAULT_INCLUDES = [ "http://*", "https://*", "about:blank" ]
 
   constructor: (options = {}) ->
-    { @outputPath, @inputDirectory, @rootDirectory, @metadataExtension, entries, commonJsFileName, generatedModuleExtension } = options
-    @entries = {}
+    { @outputPath, @inputDirectory, @rootDirectory, @metadataExtension, entries, generatedModuleExtension } = options
+    @entries = []
     for moduleName, sourcePath of entries
-      @entries[moduleName] =
+      @entries.push
         moduleName: moduleName
         fileName: moduleName + '.' + generatedModuleExtension
         sourcePath: sourcePath
-    @commonJsModuleName = commonJsFileName
-    @commonJsFileName = commonJsFileName + '.' + generatedModuleExtension
+        includes: []
+        requires: []
 
   clearSetting: (setting) ->
     setting.replace(@SETTING_PREFIX, "").trim()
 
   apply: (compiler) ->
-    compiler.plugin "done",  =>
-      for moduleName, options of @entries
-        fileUtils.getLines options.sourcePath, @COMMENT_OR_EMPTY_LINE, @SETTING, options, (options, settings) =>
-          { sourcePath } = options
-          includes = []
-          requires = []
-          for setting in settings
-            if @SETTING_ERROR.test setting
-              throw "ERROR! The setting for metadata in file #{sourcePath} contains error. Check syntax of 'include' or 'require' comments"
-            (includes.push @clearSetting setting) if @INCLUDE_SETTING.test setting
-            (requires.push @clearSetting setting) if @REQUIRE_SETTING.test setting
-          @createFileFromMetadata
-            includes: if includes.length <= 0 then DEFAULT_INCLUDES else includes
-            sourcePath: sourcePath
-            fileName: options.fileName
-            moduleName: options.moduleName
-            requires: requires
-      @createFileFromMetadata
-        moduleName: @commonJsModuleName
-        fileName: @commonJsFileName
-        includes: DEFAULT_INCLUDES
-        sourcePath: path.join @outputPath, @commonJsFileName
+    compiler.plugin "done", =>
+      for options in @entries
+        fileUtils.getLines options.sourcePath, @COMMENT_OR_EMPTY_LINE, @SETTING, options, @onReadSettingsComplete
 
-  createFileFromMetadata: (metadata) =>
-    { fileName, includes, requires, sourcePath, moduleName } = metadata
-    requires = @resolvePathToLibs sourcePath, requires
-    metadata = '// ==UserScript==' + os.EOL
-    for include in includes
-      metadata += '// @include ' + include + os.EOL
-    for lib in requires
-      metadata += '// @require ' + lib + os.EOL
-    metadata += '// @require ' + path.join(@inputDirectory, fileName) + os.EOL
-    metadata += '// ==/UserScript==' + os.EOL
-    fileUtils.createFile path.join(@outputPath, moduleName + '.' + @metadataExtension), metadata
+  onReadSettingsComplete: (options, settings) =>
+    for setting in settings
+      if @SETTING_ERROR.test setting
+        throw chalk.red "ERROR! The setting for metadata in file #{options.sourcePath} is invalid. Check syntax of 'include' or 'require' comment"
+      (options.includes.push @clearSetting setting) if @INCLUDE_SETTING.test setting
+      (options.requires.push @clearSetting setting) if @REQUIRE_SETTING.test setting
+    @buildFileFromOptions path.join(@outputPath, options.moduleName + '.' + @metadataExtension), options
 
-  resolvePathToLibs: (sourcePath, requires = []) ->
-    libs = []
+  buildFileFromOptions: (pathToFile, options) =>
+    fileUtils.buildFile pathToFile, options, (metadata, lines) =>
+      { includes, requires, fileName, sourcePath } = metadata
+      lines.push '// ==UserScript=='
+      for include in @resolveIncludes includes
+        lines.push '// @include ' + include
+      for lib in @resolveRequires requires, sourcePath, fileName
+        lines.push '// @require ' + lib
+      lines.push '// ==/UserScript=='
+    @log '[MetadataPlugin] files created:', pathToFile
+
+  log: (title, pathToFile) =>
+    unless @title?
+      console.log chalk.bold title
+      @title = title
+    console.log '\t' + chalk.green.bold path.basename(pathToFile)
+
+  resolveIncludes: (includes) ->
+    if includes.length <= 0 then DEFAULT_INCLUDES else includes
+
+  resolveRequires: (requires = [], sourcePath, moduleFileName) ->
+    result = []
     for lib in requires
       pathToLib = @resolvePathToLib sourcePath, lib
       shortPath = pathToLib.replace @rootDirectory + path.sep, ''
       fileUtils.copyFileTo pathToLib, path.join @outputPath, shortPath.replace @inputDirectory + path.sep, ''
-      libs.push shortPath
-    libs
+      result.push shortPath
+    result.push path.join @inputDirectory, moduleFileName
+    result
 
   resolvePathToLib: (sourcePath, lib) ->
     lib = if lib.indexOf('.js') <= 0 then lib + '.js' else lib
@@ -199,44 +131,39 @@ class WebPackUtils.MetadataPlugin
       if fileUtils.fileExists currentPath
         return currentPath
       level--
-    throw "ERROR! Impossible to find library #{lib} for #{sourcePath}"
+    throw chalk.red "ERROR! Impossible to find library #{lib} for #{sourcePath}"
 
 
-# TODO: use the same Plugin to store all variables inside
 class WebPackUtils.ExtesionConfigPlugin
   priority:
-#   commonJsFileName: 0
-    _AtTheBeginning: 1
-#   otherJsFileNames: 2
-    _AtTheEnd: 3
+    _AtTheBeginning: 0
+#   otherJsFileNames: 1
+    _AtTheEnd: 2
 
   scripts: {}
-  foldersCompiled: 0
+  countDirectoriesCompiled: 0
 
-  sortValue: (value) -> (@priority[value] ? 2) + value
+  sortValue: (value) -> (@priority[value] ? 1) + value
 
   constructor: (options = {}) ->
-    # @outputPath where new config must be
-    { @outputPath, @extensionConfig, @commonJsFileName, @inputDirectories, @configEncoding } = options
-    @priority[@commonJsFileName] = 0
-    #
+    { @outputPath, @pathToConfig, @inputDirectories, @configEncoding } = options
 
   setOptions: (options) ->
-    { entries, inputDirectory, hasCommonJs, fileExtension } = options
+    { entries, inputDirectory, fileExtension } = options
     fileNames = (key for key, value of entries)
-    fileNames.push @commonJsFileName if hasCommonJs
     fileNames.sort (value1, value2) => @sortValue(value1).localeCompare @sortValue(value2)
     fileNames = for fileName in fileNames
       path.join(inputDirectory, fileName + '.' + fileExtension)
     @scripts[inputDirectory] = fileNames.join '", "'
 
   apply: (compiler) ->
-    compiler.plugin "done",  =>
-      unless ++@foldersCompiled == @inputDirectories.length then return
-      configFileContent = fs.readFileSync @extensionConfig, @configEncoding
+    compiler.plugin "done", =>
+      unless ++@countDirectoriesCompiled is @inputDirectories.length then return
+      configFileContent = fileUtils.readFile @pathToConfig, @configEncoding
       for key, value of @scripts
         configFileContent = configFileContent.replace "%#{key}_scripts%", value
       fileUtils.createFile path.join(@outputPath, 'extension_info.json'), configFileContent
+      console.log chalk.bold "[ExtesionConfigPlugin] #{chalk.green 'extension_info.json created'}"
 
 
 module.exports = WebPackUtils
