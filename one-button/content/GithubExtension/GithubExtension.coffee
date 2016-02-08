@@ -6,9 +6,8 @@
 
   GithubExtension.onceOnClick = ->
 
-      console.log 'onceOnClick', $?
       requireAll require.context('./css', true, /\.(less|css)$/)
-      git_commits_box  = require('./html/commits_box.html')
+      git_commits_box  = require('./html/commits_box.handlebars')
 
       $('body').css('margin-top', '120px').prepend git_commits_box()
 
