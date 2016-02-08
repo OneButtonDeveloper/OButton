@@ -67,6 +67,6 @@ module.exports = for inputDirectory in inputDirectories
         { test: /\.less$/, loader: 'style!css!less' }
         { test: /\.tsx?$/, loader: 'ts-loader' }
         { test: /\.coffee$/, loader: 'coffee-loader' }
-        { test: /\.(handlebars|html)$/, loader: 'handlebars-template-loader' }
+        { test: /\.handlebars$/, loader: 'handlebars-template-loader' }
         { test: /\.(png|jpg|svg|ttf|eot|woff|woff2)$/, loader: 'url' }
       ]
