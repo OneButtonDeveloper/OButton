@@ -1,5 +1,3 @@
-#require shortcut
-
 ((LorenIpsum) ->
 
   contains = (text, array) ->
@@ -91,7 +89,7 @@
       $el.val('Very long long long long long long long long long long long long long text...').change()
 
     keydown = (e) ->
-      if e.key is 'Tab' and el = document.activeElement
+      if (e.key is 'Tab' or e.keyCode is 9 or e.which is 9) and (el = document.activeElement)
           $el = $(el)
           id = ($el.attr('id') ? '').toLowerCase()
           handlers[el.tagName.toLowerCase()]? $(el), id, e.altKey

@@ -62,12 +62,13 @@ class WebPackUtils.MetadataPlugin
   DEFAULT_INCLUDES = [ "http://*", "https://*", "about:blank" ]
 
   constructor: (options = {}) ->
-    { @outputPath, @inputDirectory, @rootDirectory, @metadataExtension, entries, generatedModuleExtension } = options
+    { @outputPath, @inputDirectory, @rootDirectory, metadataExtension, entries, generatedModuleExtension } = options
     @entries = []
     for moduleName, sourcePath of entries
       @entries.push
         moduleName: moduleName
         fileName: moduleName + '.' + generatedModuleExtension
+        metadataFileName: moduleName + '.' + metadataExtension
         sourcePath: sourcePath
         includes: []
         requires: []
@@ -86,7 +87,15 @@ class WebPackUtils.MetadataPlugin
         throw chalk.red "ERROR! The setting for metadata in file #{options.sourcePath} is invalid. Check syntax of 'include' or 'require' comment"
       (options.includes.push @clearSetting setting) if @INCLUDE_SETTING.test setting
       (options.requires.push @clearSetting setting) if @REQUIRE_SETTING.test setting
-    @buildFileFromOptions path.join(@outputPath, options.moduleName + '.' + @metadataExtension), options
+    @runContentScriptInPageContext path.join(@outputPath, options.fileName)
+    @buildFileFromOptions path.join(@outputPath, options.metadataFileName), options
+
+  runContentScriptInPageContext: (pathToOutputJs) ->
+    if fileUtils.fileExists pathToOutputJs
+      content = fileUtils.readFile pathToOutputJs, 'utf8'
+      content = content.replace(/\\/g, "\\\\").replace(/"/g, "\\\"")
+      content = 'var s = document.createElement("script");s.type="text/javascript";s.innerText="' + content + '";document.getElementsByTagName("head")[0].appendChild(s);'
+      fileUtils.createFile pathToOutputJs, content
 
   buildFileFromOptions: (pathToFile, options) =>
     fileUtils.buildFile pathToFile, options, (metadata, lines) =>
