@@ -75,6 +75,9 @@ class FileUtils
   buildFile: (pathToFile, options, builder) ->
     lines = []
     builder options, lines
-    fs.writeFileSync pathToFile, lines.join os.EOL
+    try
+      fs.writeFileSync pathToFile, lines.join os.EOL
+    catch e
+      console.log "Can't build the file: #{pathToFile}"
 
 module.exports = FileUtils

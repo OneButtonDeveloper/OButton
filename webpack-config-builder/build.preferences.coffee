@@ -16,7 +16,7 @@ class DevelopmentBuildTypePreferences extends BuildTypePreferences
         drop_console: false
         unsafe: false
         keep_fnames: true
-# TODO:  getDevTool: -> 'eval'
+  getDevTool: -> 'eval'
 
 class ProductionBuildTypePreferences extends BuildTypePreferences
   addOptimizePlugins: (plugins) ->

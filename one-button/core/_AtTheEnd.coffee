@@ -1,13 +1,21 @@
 # Script that will run at the end
 
+isFunction = (f) ->
+  return f? and {}.toString.call(f) is '[object Function]'
+
+isArray = (f) ->
+  return f? and {}.toString.call(f) is '[object Array]'
+
 class OButtonCore
   constructor: (contextName) ->
     @container = OButton
     @inContext = "in the #{contextName} context"
+    @routers = []
 
   run: =>
     if @canInitialize()
       @initializeModules()
+      @intializeLocationListener()
       @initializeOnClickListener @onClick
 
   canInitialize: =>
@@ -15,34 +23,67 @@ class OButtonCore
       console.log "!!! Impossible to initialize OButtonCore. OButton not defined #{@inContext}"
     @container?
 
-  firstTimeClick: {}
   initializeModules: =>
     console.log "Initialization of modules #{@inContext}"
     for name, module of @container
-      @firstTimeClick[name] = yes
-      if module.initialize?
-        try
-          module.initialize()
-          console.log "Module #{ name } initialized #{@inContext}"
-        catch e
-          console.log "Module #{ name } not initialized #{@inContext}. See error: ", e
+      try
+        module.initialize?()
+        @intializeRouter module
+        console.log "Module #{ name } initialized #{@inContext}"
+      catch e
+        console.log "Module #{ name } not initialized #{@inContext}. See error: ", e
+    console.log "Routers: ", @routers
 
   initializeOnClickListener: (onClick) ->
     throw 'onClickListener must be implemented in a child class'
 
   onClick: (dataFromBackground) =>
-    # TODO: made router nicer
-    # TODO: regex: //, onEnter, onLeave, onClick (isFirstTime, dataFromBackground)
-    # TODO: use getInstance() instead of global functions
     console.log "onClick #{@inContext} with data: ", dataFromBackground
     for name, module of @container
-      if module.onceOnClick? and firstTimeClick[name]
-        if not module.urlRegEx? or module.urlRegEx.test window.location.href
-          console.log name + '.onceOnClick()'
-          module.onceOnClick()
-          firstTimeClick[name] = no
-      if module.onClick?
-        console.log name + '.onClick()'
-        module.onClick()
+      module.onClick?(dataFromBackground) # very simple onClick
+    @routersUpdate true, dataFromBackground
+
+  intializeRouter: (module) ->
+    if router = module.router
+      router = if isFunction router then router() else router
+      if isArray router
+        @routers.push.apply @routers, router
+      else
+        @routers.push router
+
+  routersUpdate: (isOnClick, dataFromBackground) =>
+    @routerWalk null, @routers, isOnClick, dataFromBackground
+
+  routerWalk: (parentRouter, routers, isOnClick, dataFromBackground) =>
+    unless routers? then return
+    for router in routers
+      @runRouter parentRouter, router, isOnClick, dataFromBackground
+      @routerWalk router, router.routers, isOnClick, dataFromBackground
+
+  runRouter: (parentRouter, router, isOnClick, dataFromBackground) ->
+    isActive = if parentRouter then parentRouter.isActive else true
+    isActive = isActive and router.url.test window.location.href
+    if not router.isActive and isActive
+      router.isActive = isActive
+      router.isFirstTimeClick = null
+      router.onEnter?()
+    if router.isActive and not isActive
+      router.isActive = isActive
+      router.onLeave?()
+    if router.isActive and isOnClick
+      router.onClick?(router.isFirstTimeClick ? true, dataFromBackground)
+      router.isFirstTimeClick = false
+
+  intializeLocationListener: =>
+    @previousHrefValue = window.location.href.slice(0)
+    @routersUpdate()
+    onTimeout = =>
+      if @previousHrefValue isnt window.location.href
+        @previousHrefValue = window.location.href.slice(0)
+        @routersUpdate()
+    ticker = ->
+      onTimeout()
+      setTimeout ticker, 100
+    ticker()
 
 module.exports = OButtonCore
