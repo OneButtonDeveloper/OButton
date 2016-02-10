@@ -13,7 +13,9 @@ rootDirectory = 'one-button'
 buildDirectory = path.join rootDirectory, 'src', 'common'
 
 contentDirectory = 'content'
-inputDirectories = [contentDirectory, 'background']
+pageDirectory = 'page'
+backgroundDirectory = 'background'
+inputDirectories = [contentDirectory, pageDirectory, backgroundDirectory]
 
 entryResolver = new utils.EntryResolver
   files:
@@ -30,11 +32,13 @@ extesionConfigPlugin = new utils.ExtesionConfigPlugin
 module.exports = for inputDirectory in inputDirectories
   outputPath = path.join buildDirectory, inputDirectory
   entries = entryResolver.getEntries path.join(rootDirectory, inputDirectory)
+  isContentScript = inputDirectory isnt backgroundDirectory
 
   extesionConfigPlugin.setOptions
     entries: entries
     inputDirectory: inputDirectory
-    fileExtension: if inputDirectory is contentDirectory then metadataExtension else generatedModuleExtension
+    fileExtension: if isContentScript then metadataExtension else generatedModuleExtension
+    isContentScript: isContentScript
 
   plugins = [
     new webpack.NoErrorsPlugin
@@ -43,7 +47,7 @@ module.exports = for inputDirectory in inputDirectories
     extesionConfigPlugin
   ]
 
-  if inputDirectory is contentDirectory
+  if isContentScript
     plugins.push new utils.MetadataPlugin
         generatedModuleExtension: generatedModuleExtension
         metadataExtension: metadataExtension
@@ -51,6 +55,7 @@ module.exports = for inputDirectory in inputDirectories
         entries: entries
         outputPath: outputPath
         inputDirectory: inputDirectory
+        isInPageContext: inputDirectory is pageDirectory
 
   buildPreferences.addOptimizePlugins plugins
 

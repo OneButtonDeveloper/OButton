@@ -1,4 +1,5 @@
 #include https://github.com/*
+#require jquery.min
 
 ((GithubExtension) ->
 

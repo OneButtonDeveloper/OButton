@@ -62,7 +62,7 @@ class WebPackUtils.MetadataPlugin
   DEFAULT_INCLUDES = [ "http://*", "https://*", "about:blank" ]
 
   constructor: (options = {}) ->
-    { @outputPath, @inputDirectory, @rootDirectory, metadataExtension, entries, generatedModuleExtension } = options
+    { @outputPath, @inputDirectory, @rootDirectory, @isInPageContext, metadataExtension, entries, generatedModuleExtension } = options
     @entries = []
     for moduleName, sourcePath of entries
       @entries.push
@@ -87,10 +87,13 @@ class WebPackUtils.MetadataPlugin
         throw chalk.red "ERROR! The setting for metadata in file #{options.sourcePath} is invalid. Check syntax of 'include' or 'require' comment"
       (options.includes.push @clearSetting setting) if @INCLUDE_SETTING.test setting
       (options.requires.push @clearSetting setting) if @REQUIRE_SETTING.test setting
-    @runContentScriptInPageContext path.join(@outputPath, options.fileName)
+    if @isInPageContext
+      @runContentScriptInPageContext path.join(@outputPath, options.fileName), options.requires
     @buildFileFromOptions path.join(@outputPath, options.metadataFileName), options
 
-  runContentScriptInPageContext: (pathToOutputJs) ->
+  runContentScriptInPageContext: (pathToOutputJs, requires) ->
+    if requires.length > 0
+      throw "In page scripts don't allow using require command in the comments! Please, use requre function from webpack"
     if fileUtils.fileExists pathToOutputJs
       content = fileUtils.readFile pathToOutputJs, 'utf8'
       content = content.replace(/\\/g, "\\\\").replace(/"/g, "\\\"")
@@ -158,19 +161,21 @@ class WebPackUtils.ExtesionConfigPlugin
     { @outputPath, @pathToConfig, @inputDirectories, @configEncoding } = options
 
   setOptions: (options) ->
-    { entries, inputDirectory, fileExtension } = options
+    { entries, isContentScript, inputDirectory, fileExtension } = options
     fileNames = (key for key, value of entries)
     fileNames.sort (value1, value2) => @sortValue(value1).localeCompare @sortValue(value2)
     fileNames = for fileName in fileNames
       path.join(inputDirectory, fileName + '.' + fileExtension)
-    @scripts[inputDirectory] = fileNames.join '", "'
+    key = if isContentScript then 'content' else 'background'
+    scripts = @scripts["%#{key}_scripts%"] ?= []
+    scripts.push.apply scripts, fileNames
 
   apply: (compiler) ->
     compiler.plugin "done", =>
       unless ++@countDirectoriesCompiled is @inputDirectories.length then return
       configFileContent = fileUtils.readFile @pathToConfig, @configEncoding
       for key, value of @scripts
-        configFileContent = configFileContent.replace "%#{key}_scripts%", value
+        configFileContent = configFileContent.replace key, value.join '", "'
       fileUtils.createFile path.join(@outputPath, 'extension_info.json'), configFileContent
       console.log chalk.bold "[ExtesionConfigPlugin] #{chalk.green 'extension_info.json created'}"
 
