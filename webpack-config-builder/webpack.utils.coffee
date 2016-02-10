@@ -96,7 +96,7 @@ class WebPackUtils.MetadataPlugin
       throw "In page scripts don't allow using require command in the comments! Please, use requre function from webpack"
     if fileUtils.fileExists pathToOutputJs
       content = fileUtils.readFile pathToOutputJs, 'utf8'
-      content = content.replace(/\\/g, "\\\\").replace(/"/g, "\\\"")
+      content = content.replace(/\\/g, "\\\\").replace(/"/g, "\\\"").replace(/\n|\r|\t/g, "")
       content = 'var s = document.createElement("script");s.type="text/javascript";s.innerText="' + content + '";document.getElementsByTagName("head")[0].appendChild(s);'
       fileUtils.createFile pathToOutputJs, content
 
