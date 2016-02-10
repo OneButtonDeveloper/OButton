@@ -19,22 +19,27 @@
 
   LorenIpsum.initialize = ->
     shortcut = require('exports?shortcut!./libs/shortcut.js')
+    ChanceClass = require('chance')
+    chance = new ChanceClass()
     randomizer = new Randomizer()
     handlers = {}
     handlers.input = ($el, id, altKey) ->
       if $el.attr('type') is 'checkbox'
-        return $el.prop 'checked', randomizer.randomBool()
+        return $el.prop 'checked', chance.bool()
       if ($el.attr('class') ? '').indexOf('select2') >= 0
         $select = $('#' + id.replace('_search', '')).parent().next('select')
         if $select.length > 0
           return handlers['select']($select, $select.attr('id').toLowerCase(), altKey)
       inputHandlers = [
         ($el, id, altKey) ->
-          if contains(id, ['firstname', 'lastname'])
-            return randomizer.getUpperMeat() + ' ' + randomizer.getUpperMeat()
+          if contains(id, ['firstname'])
+            return chance.first()
+        ($el, id, altKey) ->
+          if contains(id, ['lastname'])
+            return chance.last()
         ($el, id, altKey) ->
           if contains(id, ['phone', 'mobile'])
-            return '+4722222222'
+            return chance.phone()
         ($el, id, altKey) ->
           if contains(id, ['date', 'period'])
             if contains(id, ['from', 'start'])
@@ -44,28 +49,25 @@
             return '03.04.1991'
         ($el, id, altKey) ->
           if contains(id, ['email', 'mail'])
-            return 'one.button.developer@gmail.com'
+            return chance.email()
         ($el, id, altKey) ->
           if contains(id, ['percent', 'quantity'])
-            return 24
+            return chance.integer({min: 0, max: 99})
         ($el, id, altKey) ->
           if contains(id, ['price', 'cost', 'salary', 'rate', 'sum', 'amount'])
-            return 1000
+            return chance.integer({min: 300, max: 538})
         ($el, id, altKey) ->
-          if contains(id, ['site'])
-            return 'www.google.com'
+          if contains(id, ['site', 'url', 'link'])
+            return chance.url()
         ($el, id, altKey) ->
           if contains(id, ['time'])
-            return '1:30'
-        ($el, id, altKey) ->
-          if contains(id, ['url', 'link'])
-            return 'URL??'
+            return chance.integer({min: 0, max: 23}) + ':' + chance.integer({min: 0, max: 59})
         ($el, id, altKey) ->
           if contains(id, ['user', 'person'])
-            return randomizer.getUpperMeat() + ' ' + randomizer.getUpperMeat()
+            return chance.name()
         ($el, id, altKey) ->
           if contains(id, ['number', 'size'])
-            return 123456
+            return chance.integer({min: 1000, max: 10000})
         ($el, id, altKey) ->
           if contains(id, ['name', 'title'])
             return randomizer.getUpperMeat() + ' ' + randomizer.getMeat()
@@ -81,18 +83,24 @@
       if childrens.length > 0
         $randomChild = $(randomizer.randomFromArray(childrens))
         newValue = $randomChild.attr('value') ? null
+        unless newValue
+          $randomChild = $(randomizer.randomFromArray(childrens))
+          newValue = $randomChild.attr('value') ? null
         if childrens.length is 1 and not newValue? then return
         $el.attr('data-value', newValue).val(newValue).change()
         $el.select2?('val', newValue)
 
     handlers.textarea = ($el, id, altKey) ->
-      $el.val('Very long long long long long long long long long long long long long text...').change()
+      $el.val(chance.paragraph()).change()
 
     keydown = (e) ->
-      if (e.key is 'Tab' or e.keyCode is 9 or e.which is 9) and (el = document.activeElement)
+      try
+        if (e.key is 'Tab' or e.keyCode is 9 or e.which is 9) and (el = document.activeElement)
           $el = $(el)
           id = ($el.attr('id') ? '').toLowerCase()
           handlers[el.tagName.toLowerCase()]? $(el), id, e.altKey
+      catch e
+        console.log 'keydown', e
 
     isActive = true
     $(document).on 'keydown', keydown

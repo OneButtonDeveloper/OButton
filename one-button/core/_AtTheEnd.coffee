@@ -32,7 +32,6 @@ class OButtonCore
         console.log "Module #{ name } initialized #{@inContext}"
       catch e
         console.log "Module #{ name } not initialized #{@inContext}. See error: ", e
-    console.log "Routers: ", @routers
 
   initializeOnClickListener: (onClick) ->
     throw 'onClickListener must be implemented in a child class'
