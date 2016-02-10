@@ -4,5 +4,6 @@ node_modules/
 webpack.config.js
 one-button/src/common/background
 one-button/src/common/content
+one-button/src/common/page
 one-button/src/common/extension_info.json
 webpack-config-builder/utils-js
