@@ -1,31 +1,25 @@
 # OButton
 
-One-button cross-browser extension based on the [kango framework](https://github.com/KangoExtensions/kango)
-
-Used [CoffeeScript](http://coffeescript.org/) and [Handlebars.js](http://handlebarsjs.com/) projects to simplify developing custom extensions for browsers
+One-button cross-browser extension based on the [kango framework](https://github.com/KangoExtensions/kango) and [webpack](https://github.com/webpack/webpack)
 
 > **Safari** and **IE** browsers not fully supported
 
 ### Requirements
 
-Install [precompiler](http://handlebarsjs.com/precompilation.html) of [Handlebars.js](http://handlebarsjs.com/) to let you build semantic html-templates
+[nodejs](https://nodejs.org/)
+
+[python](https://www.python.org/downloads/)
+
+Run in a project directory (with a [package.json](https://github.com/OneButtonDeveloper/OButton/blob/master/package.json) file):
 
 ```
-npm install handlebars -g
-```
-
-Install [compiler](http://coffeescript.org/#installation) of [CoffeeScript](http://coffeescript.org/) to let you use the good parts of JavaScript in a simple way
-
-```
-npm install -g coffee-script
+npm install
 ```
 
 ### Build
 
-Run the [build.sh](https://github.com/OneButtonDeveloper/one-button-browser-extension/blob/master/one-button/build.sh) file from the [one-button](https://github.com/OneButtonDeveloper/one-button-browser-extension/tree/master/one-button) directory
-
-For example in Terminal on a Mac
+Run the [build-dev.py](https://github.com/OneButtonDeveloper/one-button-browser-extension/blob/master/build-dev.py) file from the project directory
 
 ```
-bash build.sh
+python build-dev.py
 ```
