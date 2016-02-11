@@ -102,8 +102,7 @@
       catch e
         console.log 'keydown', e
 
-    isActive = true
-    $(document).on 'keydown', keydown
+    isActive = false
     shortcut.add "Alt+F1", ->
       $(document)[if isActive then 'off' else 'on'] 'keydown', keydown
       isActive = not isActive

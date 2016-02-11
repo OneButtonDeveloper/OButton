@@ -3,10 +3,10 @@
 
 ((GithubExtension) ->
 
-  GithubExtension.urlRegEx = /^https:..github.com(.*)commits(.*)$/
-
-  GithubExtension.onceOnClick = ->
-
+  GithubExtension.router =
+    url: /^https:..github.com(.*)commits(.*)$/
+    onClick: (isFirstTime) ->
+      unless isFirstTime then return
       requireAll require.context('./css', true, /\.(less|css)$/)
       git_commits_box  = require('./html/commits_box.handlebars')
 
