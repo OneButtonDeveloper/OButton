@@ -1,7 +1,7 @@
 ((LorenIpsum) ->
 
-  contains = (text, array) ->
-    for item in array
+  contains = (text, items...) ->
+    for item in items
       if text.indexOf(item) >= 0 then return true
     false
 
@@ -23,6 +23,51 @@
     chance = new ChanceClass()
     randomizer = new Randomizer()
     handlers = {}
+    inputHandlers = [
+      ($el, id, altKey) ->
+        if contains(id, 'firstname')
+          return chance.first()
+      ($el, id, altKey) ->
+        if contains(id, 'lastname')
+          return chance.last()
+      ($el, id, altKey) ->
+        if contains(id, 'phone', 'mobile')
+          return chance.phone()
+      ($el, id, altKey) ->
+        if contains(id, 'date', 'period')
+          if contains(id, 'from', 'start')
+            return '01.01.2016'
+          if contains(id, 'to', 'end')
+            return '31.12.2016'
+          return '03.04.1991'
+      ($el, id, altKey) ->
+        if contains(id, 'email', 'mail')
+          return chance.email()
+      ($el, id, altKey) ->
+        if contains(id, 'percent', 'quantity')
+          return chance.integer({min: 0, max: 99})
+      ($el, id, altKey) ->
+        if contains(id, 'price', 'cost', 'salary', 'rate', 'sum', 'amount')
+          return chance.integer({min: 300, max: 538})
+      ($el, id, altKey) ->
+        if contains(id, 'site', 'url', 'link')
+          return chance.url()
+      ($el, id, altKey) ->
+        if contains(id, 'time')
+          return chance.integer({min: 0, max: 23}) + ':' + chance.integer({min: 0, max: 59})
+      ($el, id, altKey) ->
+        if contains(id, 'user', 'person')
+          return chance.name()
+      ($el, id, altKey) ->
+        if contains(id, 'number', 'size')
+          return chance.integer({min: 1000, max: 10000})
+      ($el, id, altKey) ->
+        if contains(id, 'name', 'title')
+          return randomizer.getUpperMeat() + ' ' + randomizer.getMeat()
+      ($el, id, altKey) ->
+        randomizer.getUpperMeat()
+    ]
+
     handlers.input = ($el, id, altKey) ->
       if $el.attr('type') is 'checkbox'
         return $el.prop 'checked', chance.bool()
@@ -30,54 +75,11 @@
         $select = $('#' + id.replace('_search', '')).parent().next('select')
         if $select.length > 0
           return handlers['select']($select, $select.attr('id').toLowerCase(), altKey)
-      inputHandlers = [
-        ($el, id, altKey) ->
-          if contains(id, ['firstname'])
-            return chance.first()
-        ($el, id, altKey) ->
-          if contains(id, ['lastname'])
-            return chance.last()
-        ($el, id, altKey) ->
-          if contains(id, ['phone', 'mobile'])
-            return chance.phone()
-        ($el, id, altKey) ->
-          if contains(id, ['date', 'period'])
-            if contains(id, ['from', 'start'])
-              return '01.01.2016'
-            if contains(id, ['to', 'end'])
-              return '31.12.2016'
-            return '03.04.1991'
-        ($el, id, altKey) ->
-          if contains(id, ['email', 'mail'])
-            return chance.email()
-        ($el, id, altKey) ->
-          if contains(id, ['percent', 'quantity'])
-            return chance.integer({min: 0, max: 99})
-        ($el, id, altKey) ->
-          if contains(id, ['price', 'cost', 'salary', 'rate', 'sum', 'amount'])
-            return chance.integer({min: 300, max: 538})
-        ($el, id, altKey) ->
-          if contains(id, ['site', 'url', 'link'])
-            return chance.url()
-        ($el, id, altKey) ->
-          if contains(id, ['time'])
-            return chance.integer({min: 0, max: 23}) + ':' + chance.integer({min: 0, max: 59})
-        ($el, id, altKey) ->
-          if contains(id, ['user', 'person'])
-            return chance.name()
-        ($el, id, altKey) ->
-          if contains(id, ['number', 'size'])
-            return chance.integer({min: 1000, max: 10000})
-        ($el, id, altKey) ->
-          if contains(id, ['name', 'title'])
-            return randomizer.getUpperMeat() + ' ' + randomizer.getMeat()
-        ($el, id, altKey) ->
-          randomizer.getUpperMeat()
-      ]
       for handler in inputHandlers
         if value = handler $el, id, altKey
           $el.val(value).change()
           return
+
     handlers.select = ($el, id, altKey) ->
       childrens = $el.children()
       if childrens.length > 0

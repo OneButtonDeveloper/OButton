@@ -7,17 +7,18 @@ readline = require 'readline'
 class FileUtils
   walk: (context, dir, callback) ->
     currentContext = path.join context, dir
-    results = fs.readdirSync currentContext
     files = []
     dirs = []
-    for f in results
-      fullPath = path.join currentContext, f
-      stat = fs.statSync fullPath
-      files.push f if stat.isFile()
-      dirs.push f if stat.isDirectory()
-    if callback context, dir, dirs, files
-      for dir in dirs
-        @walk currentContext, dir, callback
+    if @directoryExists currentContext
+      results = fs.readdirSync currentContext
+      for f in results
+        fullPath = path.join currentContext, f
+        stat = fs.statSync fullPath
+        files.push f if stat.isFile()
+        dirs.push f if stat.isDirectory()
+      if callback context, dir, dirs, files
+        for dir in dirs
+          @walk currentContext, dir, callback
 
   zIgroring: /^z.+/
   isInclude: (title, options) ->
@@ -65,6 +66,12 @@ class FileUtils
   fileExists: (filePath) ->
     try
       return fs.statSync(filePath).isFile()
+    catch err
+      return false
+
+  directoryExists: (filePath) ->
+    try
+      return fs.statSync(filePath).isDirectory()
     catch err
       return false
 

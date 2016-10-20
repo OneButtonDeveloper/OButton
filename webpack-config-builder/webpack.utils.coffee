@@ -16,18 +16,27 @@ class WebPackUtils.EntryResolver
   getEntries: (directory) ->
     unless directory? then throw chalk.red 'Set a directory param of getEntities() - directory with modules (Ex. "content")'
 
+    libsDirectories = fileUtils.getDirectories @context, path.join(directory, 'libs'), @directories
+    @setEntriesFromDirectories entries, directory, libsDirectories
+
     entries = {}
     for file in fileUtils.getFiles @context, directory, @files
       @setEntryTo entries, file
 
     topDirectories = fileUtils.getDirectories @context, directory, @directories
-    newContext = path.join @context, directory
-    for topDirectory in topDirectories
-      modules = fileUtils.getFiles newContext, topDirectory, @files
-      index = @getIndexJs modules, topDirectory
-      if index
-        @setEntryTo entries, path.join(directory, index), topDirectory
+    if (indexOfLibs = topDirectories.indexOf('libs')) > -1
+      topDirectories.slice(indexOfLibs, 1)
+
+    @setEntriesFromDirectories entries, directory, topDirectories
     entries
+
+  setEntriesFromDirectories: (entries, directory, directories) ->
+    newContext = path.join @context, directory
+    for dir in directories
+      modules = fileUtils.getFiles newContext, dir, @files
+      index = @getIndexJs modules, dir
+      if index
+        @setEntryTo entries, path.join(directory, index), dir
 
   setEntryTo: (entries, file, directory) ->
     name = if directory then directory else @withoutExtension path.basename file
